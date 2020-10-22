@@ -11,6 +11,7 @@ import torch
 import torch.utils.data as data
 import h5py
 
+
 class SRData(data.Dataset):
     def __init__(self, args, train=True, benchmark=False):
         self.args = args
@@ -21,9 +22,9 @@ class SRData(data.Dataset):
         self.idx_scale = 0
 
         if train:
-            mat = h5py.File('../MWCNN/imdb_gray.mat')
+            mat = h5py.File('../MWCNN/image_denoising.mat')
             self.args.ext = 'mat'
-            self.hr_data = mat['images']['labels'][:,:,:,:]
+            self.hr_data = mat['images']['labels'][:, :, :, :]
             self.num = self.hr_data.shape[0]
             print(self.hr_data.shape)
 
@@ -32,11 +33,10 @@ class SRData(data.Dataset):
 
         self.images_hr = self._scan()
 
-
-
     def _scan(self):
         raise NotImplementedError
     #
+
     def _set_filesystem(self, dir_data):
         raise NotImplementedError
 
@@ -50,20 +50,20 @@ class SRData(data.Dataset):
         hr, filename = self._load_file(idx)
         if self.train:
 
-
             lr, hr, scale = self._get_patch(hr, filename)
 
-            lr_tensor, hr_tensor = common.np2Tensor([lr, hr], self.args.rgb_range)
+            lr_tensor, hr_tensor = common.np2Tensor(
+                [lr, hr], self.args.rgb_range)
             return lr_tensor, hr_tensor, filename
         else:
             #scale = 2
             # scale = self.scale[self.idx_scale]
             lr, hr, _ = self._get_patch(hr, filename)
 
-            lr_tensor, hr_tensor = common.np2Tensor([lr, hr], self.args.rgb_range)
+            lr_tensor, hr_tensor = common.np2Tensor(
+                [lr, hr], self.args.rgb_range)
 
             return lr_tensor, hr_tensor, filename
-
 
     def __len__(self):
         return len(self.images_hr)
@@ -90,9 +90,6 @@ class SRData(data.Dataset):
             filename = str(idx) + '.png'
         else:
             filename = str(idx + 1)
-
-
-
 
         filename = os.path.splitext(os.path.split(filename)[-1])[0]
 
@@ -122,7 +119,8 @@ class SRData(data.Dataset):
             scale = self.scale[0]
             if self.args.task_type == 'denoising':
                 lr, hr = common.add_img_noise(
-                    hr, patch_size, scale
+                    # hr, patch_size, scale
+                    hr, scale
                 )
             if self.args.task_type == 'SISR':
                 lr, hr = self._get_patch_test(
@@ -135,11 +133,11 @@ class SRData(data.Dataset):
             return lr, hr, scale
             # lr = common.add_noise(lr, self.args.noise)
 
-
     def _get_patch_test(self, hr, scale):
 
         ih, iw = hr.shape[0:2]
-        lr = imresize(imresize(hr, [int(ih/scale), int(iw/scale)], 'bicubic'), [ih, iw], 'bicubic')
+        lr = imresize(imresize(
+            hr, [int(ih / scale), int(iw / scale)], 'bicubic'), [ih, iw], 'bicubic')
         ih = ih // 8 * 8
         iw = iw // 8 * 8
         hr = hr[0:ih, 0:iw, :]
@@ -147,9 +145,5 @@ class SRData(data.Dataset):
 
         return lr, hr
 
-
-
-
     def set_scale(self, idx_scale):
         self.idx_scale = idx_scale
-
